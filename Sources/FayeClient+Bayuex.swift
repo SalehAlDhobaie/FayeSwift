@@ -8,6 +8,30 @@
 
 import Foundation
 import SwiftyJSON
+// FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
+// Consider refactoring the code to use the non-optional operators.
+fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l < r
+  case (nil, _?):
+    return true
+  default:
+    return false
+  }
+}
+
+// FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
+// Consider refactoring the code to use the non-optional operators.
+fileprivate func > <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l > r
+  default:
+    return rhs < lhs
+  }
+}
+
 
 // MARK: Bayuex Connection Type
 public enum BayeuxConnection: String {
@@ -55,10 +79,10 @@ extension FayeClient {
     // "minimumVersion": "1.0beta",
     // "supportedConnectionTypes": ["long-polling", "callback-polling", "iframe", "websocket]
     func handshake() {
-        dispatch_sync(writeOperationQueue) { [unowned self] in
+        writeOperationQueue.sync { [unowned self] in
             let connTypes:NSArray = [BayeuxConnection.LongPolling.rawValue, BayeuxConnection.Callback.rawValue, BayeuxConnection.iFrame.rawValue, BayeuxConnection.WebSocket.rawValue]
             
-            var dict = [String: AnyObject]()
+            var dict = [String: Any]()
             dict[Bayeux.Channel.rawValue] = BayeuxChannel.Handshake.rawValue
             dict[Bayeux.Version.rawValue] = "1.0"
             dict[Bayeux.MinimumVersion.rawValue] = "1.0beta"
@@ -75,8 +99,8 @@ extension FayeClient {
     // "clientId": "Un1q31d3nt1f13r",
     // "connectionType": "long-polling"
     func connect() {
-        dispatch_sync(writeOperationQueue) { [unowned self] in
-            let dict:[String:AnyObject] = [Bayeux.Channel.rawValue: BayeuxChannel.Connect.rawValue, Bayeux.ClientId.rawValue: self.fayeClientId!, Bayeux.ConnectionType.rawValue: BayeuxConnection.WebSocket.rawValue, Bayeux.Advice.rawValue: ["timeout": self.timeOut]]
+        writeOperationQueue.sync { [unowned self] in
+            let dict : [String : Any] = [Bayeux.Channel.rawValue: BayeuxChannel.Connect.rawValue, Bayeux.ClientId.rawValue: self.fayeClientId!, Bayeux.ConnectionType.rawValue: BayeuxConnection.WebSocket.rawValue, Bayeux.Advice.rawValue: ["timeout": self.timeOut]]
             
             if let string = JSON(dict).rawString() {
                 self.transport?.writeString(string)
@@ -88,8 +112,8 @@ extension FayeClient {
     // "channel": "/meta/disconnect",
     // "clientId": "Un1q31d3nt1f13r"
     func disconnect() {
-        dispatch_sync(writeOperationQueue) { [unowned self] in
-            let dict:[String:AnyObject] = [Bayeux.Channel.rawValue: BayeuxChannel.Disconnect.rawValue, Bayeux.ClientId.rawValue: self.fayeClientId!, Bayeux.ConnectionType.rawValue: BayeuxConnection.WebSocket.rawValue]
+        writeOperationQueue.sync { [unowned self] in
+            let dict : [ String : Any] = [Bayeux.Channel.rawValue: BayeuxChannel.Disconnect.rawValue, Bayeux.ClientId.rawValue: self.fayeClientId!, Bayeux.ConnectionType.rawValue: BayeuxConnection.WebSocket.rawValue]
             if let string = JSON(dict).rawString() {
                 self.transport?.writeString(string)
             }
@@ -100,16 +124,17 @@ extension FayeClient {
     // "channel": "/meta/subscribe",
     // "clientId": "Un1q31d3nt1f13r",
     // "subscription": "/foo/**"
-    func subscribe(var model:FayeSubscriptionModel) {
-        dispatch_sync(writeOperationQueue) { [unowned self] in
+    func subscribe(_ model:FayeSubscriptionModel) {
+        let model = model
+        writeOperationQueue.sync { [unowned self] in
             do {
                 let json = try model.jsonString()
                 
                 self.transport?.writeString(json)
                 self.pendingSubscriptions.append(model)
-            } catch FayeSubscriptionModelError.ConversationError {
+            } catch FayeSubscriptionModelError.conversationError {
                 
-            } catch FayeSubscriptionModelError.ClientIdNotValid
+            } catch FayeSubscriptionModelError.clientIdNotValid
                 where self.fayeClientId?.characters.count > 0 {
                     model.clientId = self.fayeClientId
                     self.subscribe(model)
@@ -125,10 +150,10 @@ extension FayeClient {
     // "clientId": "Un1q31d3nt1f13r",
     // "subscription": "/foo/**"
     // }
-    func unsubscribe(channel:String) {
-        dispatch_sync(writeOperationQueue) { [unowned self] in
+    func unsubscribe(_ channel:String) {
+        writeOperationQueue.sync { [unowned self] in
             if let clientId = self.fayeClientId {
-                let dict:[String:AnyObject] = [Bayeux.Channel.rawValue: BayeuxChannel.Unsubscibe.rawValue, Bayeux.ClientId.rawValue: clientId, Bayeux.Subscription.rawValue: channel]
+                let dict : [String : Any] = [Bayeux.Channel.rawValue: BayeuxChannel.Unsubscibe.rawValue, Bayeux.ClientId.rawValue: clientId, Bayeux.Subscription.rawValue: channel]
                 
                 if let string = JSON(dict).rawString() {
                     self.transport?.writeString(string)
@@ -144,11 +169,10 @@ extension FayeClient {
     // "data": "some application string or JSON encoded object",
     // "id": "some unique message id"
     // }
-    func publish(data:[String:AnyObject], channel:String) {
-        dispatch_sync(writeOperationQueue) { [weak self] in
-            if let clientId = self?.fayeClientId, messageId = self?.nextMessageId()
-                where self?.fayeConnected == true {
-                let dict:[String:AnyObject] = [
+    func publish(_ data:[String:AnyObject], channel:String) {
+        writeOperationQueue.sync { [weak self] in
+            if let clientId = self?.fayeClientId, let messageId = self?.nextMessageId(), self?.fayeConnected == true {
+                let dict : [String : Any] = [
                     Bayeux.Channel.rawValue: channel,
                     Bayeux.ClientId.rawValue: clientId,
                     Bayeux.Id.rawValue: messageId,

@@ -15,7 +15,7 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
   @IBOutlet weak var textView: UITextView!
   
   /// Example FayeClient
-  let client:FayeClient = FayeClient(aFayeURLString: "ws://localhost:5222/faye", channel: "/cool")
+  let client:FayeClient = FayeClient(aFayeURLString: "wws://api-dev10.sprentapp.com:8001", channel: "/messages")
   
   // MARK:
   // MARK: Lifecycle
@@ -27,17 +27,44 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
     client.connectToServer()
     
     let channelBlock:ChannelSubscriptionBlock = {(messageDict) -> Void in
-      let text: AnyObject? = messageDict["text"]
+        
+      let text : Any? = messageDict["text"]
       print("Here is the Block message: \(text)")
+        
+        
     }
-    client.subscribeToChannel("/awesome", block: channelBlock)
+    _ = client.subscribeToChannel("/messages", block: channelBlock)
     
-    let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(5 * Double(NSEC_PER_SEC)))
+    
+    
+    
+    
+    DispatchQueue.main.asyncAfter(deadline: .now() + (5 * 0.1)) {
+        // your code here
+        DispatchQueue.main.async {
+            self.client.unsubscribeFromChannel("/messages")
+        }
+    }
+    
+    /*let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(5 * Double(NSEC_PER_SEC)))
     dispatch_after(delayTime, dispatch_get_main_queue()) {
       self.client.unsubscribeFromChannel("/awesome")
+    }*/
+    
+    
+    DispatchQueue.main.asyncAfter(deadline : .now() + (5 *  0.1)) {
+        let model = FayeSubscriptionModel(subscription: "messages", clientId: nil)
+        
+        _ = self.client.subscribeToChannel(model, block: { [unowned self] messages in
+            print("awesome response: \(messages)")
+            
+            self.client.sendPing("Ping".data(using: .utf8 )!, completion: {
+                print("got pong")
+            })
+        })
     }
     
-    dispatch_after(delayTime, dispatch_get_main_queue()) {
+    /*dispatch_after(delayTime, dispatch_get_main_queue()) {
       let model = FayeSubscriptionModel(subscription: "/awesome", clientId: nil)
         
       self.client.subscribeToChannel(model, block: { [unowned self] messages in
@@ -47,14 +74,14 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
           print("got pong")
         })
       })
-    }
+    }*/
   }
     
   // MARK:
   // MARK: TextfieldDelegate
 
-  func textFieldShouldReturn(textField: UITextField) -> Bool {
-    client.sendMessage(["text" : textField.text as! AnyObject], channel: "/cool")
+  func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+    client.sendMessage(["text" : textField.text as Any], channel: "messages")
     return false;
   }
     
@@ -86,7 +113,7 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
   }
   
   func messageReceived(client: FayeClient, messageDict: NSDictionary, channel: String) {
-    let text: AnyObject? = messageDict["text"]
+    let text: Any? = messageDict["text"]
     print("Here is the message: \(text)")
   }
   

@@ -5,7 +5,9 @@ inhibit_all_warnings!
 platform :ios, '8.0'
 
 target 'FayeSwift_Example', :exclusive => true do
-  pod 'FayeSwift', :path => '../'
+    pod 'Starscream', '~> 2.0'
+    pod 'SwiftyJSON', '~> 3.1'
+    pod 'FayeSwift', :path => '../'
 end
 
 target 'FayeSwift_Tests', :exclusive => true do
