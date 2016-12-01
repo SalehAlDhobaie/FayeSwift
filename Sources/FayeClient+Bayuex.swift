@@ -64,6 +64,8 @@ public enum Bayeux: String {
     case Successful = "successful"
     case Error = "error"
     case Advice = "advice"
+    // Added By Saleh
+    case Ext = "ext"
 }
 
 // MARK: Private Bayuex Methods
@@ -78,7 +80,7 @@ extension FayeClient {
     // "version": "1.0",
     // "minimumVersion": "1.0beta",
     // "supportedConnectionTypes": ["long-polling", "callback-polling", "iframe", "websocket]
-    func handshake() {
+    func handshake(extInformation : Dictionary<String, Any>?) {
         writeOperationQueue.sync { [unowned self] in
             let connTypes:NSArray = [BayeuxConnection.LongPolling.rawValue, BayeuxConnection.Callback.rawValue, BayeuxConnection.iFrame.rawValue, BayeuxConnection.WebSocket.rawValue]
             
@@ -87,6 +89,11 @@ extension FayeClient {
             dict[Bayeux.Version.rawValue] = "1.0"
             dict[Bayeux.MinimumVersion.rawValue] = "1.0beta"
             dict[Bayeux.SupportedConnectionTypes.rawValue] = connTypes
+            
+            if let ext = extInformation {
+                dict[Bayeux.Ext.rawValue] = ext
+            }
+            
             
             if let string = JSON(dict).rawString() {
                 self.transport?.writeString(string)

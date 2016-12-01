@@ -12,7 +12,7 @@ import Foundation
 extension FayeClient {
     public func didConnect() {
         self.connectionInitiated = false;
-        self.handshake()
+        self.handshake(extInformation: extInformation)
     }
     
     public func didDisconnect(_ error: NSError?) {

@@ -15,7 +15,7 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
   @IBOutlet weak var textView: UITextView!
   
   /// Example FayeClient
-  let client:FayeClient = FayeClient(aFayeURLString: "wws://api-dev10.sprentapp.com:8001", channel: "/messages")
+  let client:FayeClient = FayeClient(aFayeURLString: "wws://api-dev10.sprentapp.com:8001", channel: "/orders/RYD-3HW1W")
   
   // MARK:
   // MARK: Lifecycle
@@ -23,28 +23,36 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
   override func viewDidLoad() {
     super.viewDidLoad()
     
+    client.extInformation = [
+        "token": "45.55ae2349289fa9ed480fe2018e724750" ,
+        "user_id": 45
+    ]
+    
     client.delegate = self;
     client.connectToServer()
     
     let channelBlock:ChannelSubscriptionBlock = {(messageDict) -> Void in
         
-      let text : Any? = messageDict["text"]
-      print("Here is the Block message: \(text)")
-        
+        let text : Any? = messageDict["text"]
+        print("Here is the Block message: \(text)")
+        print(messageDict)
         
     }
-    _ = client.subscribeToChannel("/messages", block: channelBlock)
+//    let channel = BayeuxChannel(rawValue: <#T##String#>)
+//    let model = FayeSubscriptionModel(subscription: <#T##String#>, channel: <#T##BayeuxChannel#>, clientId: <#T##String?#>)
+//    _ = client.subscribeToChannel(<#T##model: FayeSubscriptionModel##FayeSubscriptionModel#>)
+    _ = client.subscribeToChannel("/orders/RYD-3HW1W", block: channelBlock)
     
     
     
     
     
-    DispatchQueue.main.asyncAfter(deadline: .now() + (5 * 0.1)) {
+    /*DispatchQueue.main.asyncAfter(deadline: .now() + (5 * 0.1)) {
         // your code here
         DispatchQueue.main.async {
             self.client.unsubscribeFromChannel("/messages")
         }
-    }
+    }*/
     
     /*let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(5 * Double(NSEC_PER_SEC)))
     dispatch_after(delayTime, dispatch_get_main_queue()) {
@@ -54,7 +62,7 @@ class ViewController: UIViewController, UITextFieldDelegate, FayeClientDelegate 
     
     DispatchQueue.main.asyncAfter(deadline : .now() + (5 *  0.1)) {
         let model = FayeSubscriptionModel(subscription: "messages", clientId: nil)
-        
+
         _ = self.client.subscribeToChannel(model, block: { [unowned self] messages in
             print("awesome response: \(messages)")
             
